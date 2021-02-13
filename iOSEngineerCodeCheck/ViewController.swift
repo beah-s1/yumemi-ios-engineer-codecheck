@@ -7,23 +7,24 @@
 //
 
 import UIKit
+import Alamofire
 
-class ViewController: UITableViewController, UISearchBarDelegate {
-
+class ViewController: UIViewController, UITableViewDelegate, UISearchBarDelegate {
     @IBOutlet weak var SchBr: UISearchBar!
+    @IBOutlet var tableView: UITableView!
     
-    var repo: [[String: Any]]=[]
-    
-    var task: URLSessionTask?
-    var word: String!
-    var url: String!
-    var idx: Int!
+    var controller = RepositoryTableViewController()
+    var selectedRepository: GitHubRepositoryObject.Repository!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         SchBr.text = "GitHubのリポジトリを検索できるよー"
         SchBr.delegate = self
+        
+        // タップイベントで、UIViewControllerに依存するメソッドを呼び出すためDelegateのみself
+        self.tableView.delegate = self
+        self.tableView.dataSource = self.controller
     }
     
     func searchBarShouldBeginEditing(_ searchBar: UISearchBar) -> Bool {
@@ -33,60 +34,135 @@ class ViewController: UITableViewController, UISearchBarDelegate {
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        task?.cancel()
+        //task?.cancel()
     }
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        
-        word = searchBar.text!
-        
-        if word.count != 0 {
-            url = "https://api.github.com/search/repositories?q=\(word!)"
-            task = URLSession.shared.dataTask(with: URL(string: url)!) { (data, res, err) in
-                if let obj = try! JSONSerialization.jsonObject(with: data!) as? [String: Any] {
-                    if let items = obj["items"] as? [[String: Any]] {
-                    self.repo = items
-                        DispatchQueue.main.async {
-                            self.tableView.reloadData()
-                        }
-                    }
-                }
-            }
-        // これ呼ばなきゃリストが更新されません
-        task?.resume()
-        }
+        self.controller.updateRepositories(text: searchBar.text, tableView: self.tableView)
         
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        
+        // 選択されrepositoryのオブジェクトを渡す
         if segue.identifier == "Detail"{
             let dtl = segue.destination as! ViewController2
-            dtl.vc1 = self
+            dtl.repository = self.selectedRepository
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        self.selectedRepository = self.controller.repositoryObject.items[indexPath.row]
+        performSegue(withIdentifier: "Detail", sender: self)
+    }
+}
+
+class RepositoryTableViewController: NSObject, UITableViewDataSource{
+    var repositoryObject = GitHubRepositoryObject()
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return repositoryObject.items.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Repository", for: indexPath)
+        cell.textLabel?.text = repositoryObject.items[indexPath.row].fullName
+        cell.detailTextLabel?.text = repositoryObject.items[indexPath.row].language ?? ""
+        
+        return cell
+    }
+    
+    func updateRepositories(text: String?, tableView: UITableView) {
+        // repositoryのリストを更新
+        guard let text = text else{
+            return
+        }
+        
+        // 非同期で取得
+        if let url = URL(string: "https://api.github.com/search/repositories?q=\(text)"){
+            AF.request(url).responseData { (response) in
+                do {
+                    switch response.result{
+                    case .success(let result):
+                        self.repositoryObject = try JSONDecoder().decode(GitHubRepositoryObject.self, from: result)
+                    case .failure(let error):
+                        print(error.errorDescription ?? "Unknown Error")
+                    }
+                } catch {
+                    fatalError("FAILED TO PARSE")
+                }
+                
+                tableView.reloadData()
+            }
+        } else {
+            print("URL Parse Error")
+        }
+    }
+}
+
+struct GitHubRepositoryObject: Codable{
+    // JSON Decoder用のモデル
+    
+    /*
+     格納する情報
+     ・リポジトリ名
+     ・オーナーアイコン
+     ・プロジェクト言語
+     ・Star数
+     ・Watcher数
+     ・Fork数
+     ・Issue数
+     */
+    
+    var totalCount = 0
+    var incompleteResults = false
+    var items: [Repository] = []
+    
+    struct Repository: Codable{
+        var id = 0
+        var name = ""
+        var fullName = ""
+        var language: String?
+        var owner: Owner
+        var stargazersCount = 0
+        var watchersCount = 0
+        var forksCount = 0
+        var openIssuesCount = 0
+        
+        enum CodingKeys: String, CodingKey{
+            case id = "id"
+            case name = "name"
+            case fullName = "full_name"
+            case language = "language"
+            case owner = "owner"
+            case stargazersCount = "stargazers_count"
+            case watchersCount = "watchers_count"
+            case forksCount = "forks_count"
+            case openIssuesCount = "open_issues_count"
+        }
+        
+        struct Owner: Codable{
+            var login = ""
+            var id = 0
+            var nodeId = ""
+            var avatarUrl = ""
+            var url = ""
+            var htmlUrl = ""
+            
+            enum CodingKeys: String, CodingKey{
+                case login = "login"
+                case id = "id"
+                case nodeId = "node_id"
+                case avatarUrl = "avatar_url"
+                case url = "url"
+                case htmlUrl = "html_url"
+            }
         }
         
     }
     
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return repo.count
+    enum CodingKeys: String, CodingKey{
+        case totalCount = "total_count"
+        case incompleteResults = "incomplete_results"
+        case items = "items"
     }
-    
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
-        let cell = UITableViewCell()
-        let rp = repo[indexPath.row]
-        cell.textLabel?.text = rp["full_name"] as? String ?? ""
-        cell.detailTextLabel?.text = rp["language"] as? String ?? ""
-        cell.tag = indexPath.row
-        return cell
-        
-    }
-    
-    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        // 画面遷移時に呼ばれる
-        idx = indexPath.row
-        performSegue(withIdentifier: "Detail", sender: self)
-        
-    }
-    
 }
