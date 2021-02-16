@@ -86,9 +86,10 @@ class RepositoryTableViewController: NSObject, UITableViewDataSource{
                                                                        incompleteResults: true,
                                                                        items: [])
                     }
-                case .failure(let error):
-                    print(error.errorDescription ?? "Unknown Error")
-                    
+                case .failure:
+                    self.repositoryObject = GitHubRepositoryObject(totalCount: 0,
+                                                                   incompleteResults: true,
+                                                                   items: [])
                 }
                 
                 tableView.reloadData()
