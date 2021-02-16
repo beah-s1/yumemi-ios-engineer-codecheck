@@ -1,5 +1,5 @@
 //
-//  ViewController2.swift
+//  DetailViewController.swift
 //  iOSEngineerCodeCheck
 //
 //  Created by 史 翔新 on 2020/04/21.
@@ -9,30 +9,30 @@
 import UIKit
 import Alamofire
 
-class ViewController2: UIViewController {
+class DetailViewController: UIViewController {
     
-    @IBOutlet weak var ImgView: UIImageView!
+    @IBOutlet weak var imageView: UIImageView!
     
-    @IBOutlet weak var TtlLbl: UILabel!
+    @IBOutlet weak var titleLabel: UILabel!
     
-    @IBOutlet weak var LangLbl: UILabel!
+    @IBOutlet weak var langLabel: UILabel!
     
-    @IBOutlet weak var StrsLbl: UILabel!
-    @IBOutlet weak var WchsLbl: UILabel!
-    @IBOutlet weak var FrksLbl: UILabel!
-    @IBOutlet weak var IsssLbl: UILabel!
+    @IBOutlet weak var starsCountLabel: UILabel!
+    @IBOutlet weak var watchersCountLabel: UILabel!
+    @IBOutlet weak var forksCountLabel: UILabel!
+    @IBOutlet weak var issuesCountLabel: UILabel!
     
     var repository: GitHubRepositoryObject.Repository!
         
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        LangLbl.text = "Written in \(repository.language ?? "")"
-        StrsLbl.text = "\(repository.stargazersCount) stars"
-        WchsLbl.text = "\(repository.watchersCount) watchers"
-        FrksLbl.text = "\(repository.forksCount) forks"
-        IsssLbl.text = "\(repository.openIssuesCount) open issues"
-        TtlLbl.text = repository.fullName
+        langLabel.text = "Written in \(repository.language ?? "")"
+        starsCountLabel.text = "\(repository.stargazersCount) stars"
+        watchersCountLabel.text = "\(repository.watchersCount) watchers"
+        forksCountLabel.text = "\(repository.forksCount) forks"
+        issuesCountLabel.text = "\(repository.openIssuesCount) open issues"
+        titleLabel.text = repository.fullName
         getImage()
         
     }
@@ -46,7 +46,7 @@ class ViewController2: UIViewController {
             switch response.result{
             case .success(let result):
                 if let image = UIImage(data: result){
-                    self.ImgView.image = image
+                    self.imageView.image = image
                 }
             case .failure(let error):
                 if let errorDescription = error.errorDescription{

@@ -10,7 +10,7 @@ import UIKit
 import Alamofire
 
 class ViewController: UIViewController, UITableViewDelegate, UISearchBarDelegate {
-    @IBOutlet weak var SchBr: UISearchBar!
+    @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet var tableView: UITableView!
     
     var controller = RepositoryTableViewController()
@@ -19,8 +19,8 @@ class ViewController: UIViewController, UITableViewDelegate, UISearchBarDelegate
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        SchBr.text = "GitHubのリポジトリを検索できるよー"
-        SchBr.delegate = self
+        searchBar.text = "GitHubのリポジトリを検索できるよー"
+        searchBar.delegate = self
         
         // タップイベントで、UIViewControllerに依存するメソッドを呼び出すためDelegateのみself
         self.tableView.delegate = self
@@ -43,11 +43,12 @@ class ViewController: UIViewController, UITableViewDelegate, UISearchBarDelegate
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // 選択されrepositoryのオブジェクトを渡す
-        if segue.identifier == "Detail"{
-            let dtl = segue.destination as! ViewController2
-            dtl.repository = self.selectedRepository
+        // 選択されたrepositoryのオブジェクトを渡す
+        guard let nextViewController = segue.destination as? DetailViewController else{
+            return
         }
+        
+        nextViewController.repository = self.selectedRepository
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -80,15 +81,17 @@ class RepositoryTableViewController: NSObject, UITableViewDataSource{
         // 非同期で取得
         if let url = URL(string: "https://api.github.com/search/repositories?q=\(text)"){
             AF.request(url).responseData { (response) in
-                do {
-                    switch response.result{
-                    case .success(let result):
+                
+                switch response.result{
+                case .success(let result):
+                    do {
                         self.repositoryObject = try JSONDecoder().decode(GitHubRepositoryObject.self, from: result)
-                    case .failure(let error):
-                        print(error.errorDescription ?? "Unknown Error")
+                    } catch {
+                        fatalError("FAILED TO PARSE")
                     }
-                } catch {
-                    fatalError("FAILED TO PARSE")
+                case .failure(let error):
+                    print(error.errorDescription ?? "Unknown Error")
+                    
                 }
                 
                 tableView.reloadData()
