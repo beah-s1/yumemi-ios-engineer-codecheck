@@ -33,13 +33,8 @@ class ViewController: UIViewController, UITableViewDelegate, UISearchBarDelegate
         return true
     }
     
-    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        //task?.cancel()
-    }
-    
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         self.controller.updateRepositories(text: searchBar.text, tableView: self.tableView)
-        
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -67,7 +62,7 @@ class RepositoryTableViewController: NSObject, UITableViewDataSource{
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Repository", for: indexPath)
         cell.textLabel?.text = repositoryObject.items[indexPath.row].fullName
-        cell.detailTextLabel?.text = repositoryObject.items[indexPath.row].language ?? ""
+        cell.detailTextLabel?.text = repositoryObject.items[indexPath.row].language ?? "" // languageはOptional
         
         return cell
     }
@@ -87,7 +82,9 @@ class RepositoryTableViewController: NSObject, UITableViewDataSource{
                     do {
                         self.repositoryObject = try JSONDecoder().decode(GitHubRepositoryObject.self, from: result)
                     } catch {
-                        fatalError("FAILED TO PARSE")
+                        self.repositoryObject = GitHubRepositoryObject(totalCount: 0,
+                                                                       incompleteResults: true,
+                                                                       items: [])
                     }
                 case .failure(let error):
                     print(error.errorDescription ?? "Unknown Error")
